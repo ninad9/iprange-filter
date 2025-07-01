@@ -18,6 +18,12 @@ class IpRangeController(private val ipRangeService: IpRangeServiceInterface) {
     ): Mono<String> {
         val resolvedRegion = Region.fromString(region ?: "all")
             ?: return Mono.just("Invalid region: $region")
-        return ipRangeService.getIpRanges(resolvedRegion, ipType.lowercase())
+
+        val ipVersionType = ipType.lowercase()
+        if (ipType != "all" && ipVersionType !in setOf("ipv4", "ipv6")) {
+            return Mono.just("Invalid IP type: $ipType")
+        }
+
+        return ipRangeService.getIpRanges(resolvedRegion, ipVersionType)
     }
 }
