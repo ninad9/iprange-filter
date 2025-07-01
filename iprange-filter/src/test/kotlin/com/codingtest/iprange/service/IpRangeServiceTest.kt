@@ -1,25 +1,25 @@
 package com.codingtest.iprange.service
 
+import com.codingtest.iprange.util.Region
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito.`when`
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 import org.springframework.web.reactive.function.client.WebClient
 import reactor.core.publisher.Mono
-import kotlin.test.assertEquals
-import com.codingtest.iprange.util.Region
-import org.mockito.Mockito.mock
 
 class IpRangeServiceTest {
 
     private fun mockServiceWith(json: Map<String, Any>): IpRangeService {
-        val webClient = mock(WebClient::class.java)
-        val uriSpec = mock(WebClient.RequestHeadersUriSpec::class.java)
-        val headersSpec = mock(WebClient.RequestHeadersSpec::class.java)
-        val responseSpec = mock(WebClient.ResponseSpec::class.java)
+        val webClient = mock<WebClient>()
+        val uriSpec = mock<WebClient.RequestHeadersUriSpec<*>>()
+        val headersSpec = mock<WebClient.RequestHeadersSpec<*>>()
+        val responseSpec = mock<WebClient.ResponseSpec>()
 
-        `when`(webClient.get()).thenReturn(uriSpec)
-        `when`(uriSpec.uri("/ipranges/cloud.json")).thenReturn(headersSpec)
-        `when`(headersSpec.retrieve()).thenReturn(responseSpec)
-        `when`(responseSpec.bodyToMono(Map::class.java)).thenReturn(Mono.just(json))
+        whenever(webClient.get()).thenReturn(uriSpec)
+        whenever(uriSpec.uri("/ipranges/cloud.json")).thenReturn(headersSpec)
+        whenever(headersSpec.retrieve()).thenReturn(responseSpec)
+        whenever(responseSpec.bodyToMono(Map::class.java)).thenReturn(Mono.just(json))
 
         return IpRangeService(webClient)
     }
