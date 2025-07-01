@@ -6,6 +6,9 @@ import org.junit.jupiter.api.assertNull
 
 class RegionTest {
 
+    /**
+     * Test Spec: Validates that each known region string maps correctly to its corresponding Region enum.
+     */
     @Test
     fun fromString_shouldReturnRegionEnumWhenNameMatches() {
         val resultUs = Region.fromString("us")
@@ -40,6 +43,9 @@ class RegionTest {
 
     }
 
+    /**
+     * Test Spec: Ensures that invalid or unknown region strings return null from fromString().
+     */
     @Test
     fun fromString_shouldReturnNullWhenInputDoesNotMatchAnyRegion() {
         val result = Region.fromString("abc")
@@ -49,6 +55,9 @@ class RegionTest {
         assertNull(empty)
     }
 
+    /**
+     * Test Spec: Verifies that each Region does not mistakenly match unrelated scope names.
+     */
     @Test
     fun shouldNotMatchUnrelatedScopes() {
         assertFalse(Region.EU.scopes.any { "us-west1".contains(it) })
@@ -56,6 +65,9 @@ class RegionTest {
         assertFalse(Region.AF.scopes.any { "southamerica-east1".contains(it) })
     }
 
+    /**
+     * Test Spec: Confirms that each Region correctly matches at least one valid scope pattern it is responsible for.
+     */
     @Test
     fun shouldMatchScopeCorrectlyForEachRegion() {
         assertTrue(Region.US.scopes.any { "us-west1".contains(it) })

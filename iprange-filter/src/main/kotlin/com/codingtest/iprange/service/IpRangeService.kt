@@ -1,15 +1,19 @@
 package com.codingtest.iprange.service
 
 import com.codingtest.iprange.util.Region
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.client.WebClient
 import reactor.core.publisher.Mono
 
 @Service
-class IpRangeService : IpRangeServiceInterface {
+class IpRangeService(
+    @Qualifier("gcpWebClient")
+    private val webClient: WebClient
+) : IpRangeServiceInterface {
     override fun getIpRanges(region: Region, ipVersion: String): Mono<String> {
 
-        return WebClient.create("https://www.gstatic.com")
+        return webClient
             .get()
             .uri("/ipranges/cloud.json")
             .retrieve()
