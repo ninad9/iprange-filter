@@ -8,9 +8,24 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Mono
 
+/**
+ * REST controller that exposes an endpoint to retrieve filtered
+ * IP ranges from GCP based on region and IP version.
+ *
+ */
 @RestController
 class IpRangeController(private val ipRangeService: IpRangeServiceInterface) {
 
+    /**
+     * Retrieves GCP IP ranges based on the given region and IP version type.
+     *
+     * @param region Query parameter indicating region (e.g. "europe", "asia", etc.).
+     *               If omitted, defaults to "all".
+     * @param ipType Query parameter indicating IP version: "ipv4", "ipv6", or "all".
+     *               Defaults to "all".
+     * @return A [Mono] containing either a newline-separated list of IP prefixes or a validation error message.
+     *
+     */
     @GetMapping("/ip-ranges", produces = [MediaType.TEXT_PLAIN_VALUE])
     fun getIpRanges(
         @RequestParam region: String?,

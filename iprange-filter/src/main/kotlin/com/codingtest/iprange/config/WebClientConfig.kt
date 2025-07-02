@@ -8,6 +8,13 @@ import org.springframework.web.reactive.function.client.WebClient
 import reactor.netty.http.client.HttpClient
 import java.time.Duration
 
+/**
+ * Configuration class responsible for creating a WebClient bean with GCP's IP range endpoint.
+ *
+ * The client uses a base URL defined via "cloud.base-url" property
+ * and applies a timeout of 5 seconds for API responses.
+ *
+ */
 
 @Configuration
 class WebClientConfig( @Value("\${cloud.base-url}")
