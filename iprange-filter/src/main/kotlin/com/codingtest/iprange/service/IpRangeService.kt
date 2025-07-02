@@ -1,5 +1,6 @@
 package com.codingtest.iprange.service
 
+import com.codingtest.iprange.data.GcpResponse
 import com.codingtest.iprange.util.Region
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.stereotype.Service
@@ -13,7 +14,6 @@ import reactor.core.publisher.Mono
  *
  * This service uses a WebClient bean named "gcpWebClient".
  */
-@Suppress("UNCHECKED_CAST")
 @Service
 class IpRangeService(
     @Qualifier("gcpWebClient")
@@ -28,14 +28,13 @@ class IpRangeService(
      * @return A Mono emitting filtered IP prefixes as a newline-separated string.
      */
     override fun getIpRanges(region: Region, ipVersion: String): Mono<String> {
-
         return webClient
             .get()
             .uri("/ipranges/cloud.json")
             .retrieve()
-            .bodyToMono(Map::class.java)
-            .mapNotNull { json ->
-                (json as? Map<String, Any>)?.let { processPrefixes(it, region, ipVersion) }
+            .bodyToMono(GcpResponse::class.java)
+            .mapNotNull { response ->
+                processPrefixes(response.prefixes, region, ipVersion)
             }
             .switchIfEmpty(Mono.just("Malformed or empty response from GCP"))
             .onErrorResume { ex ->
@@ -49,15 +48,13 @@ class IpRangeService(
     /**
      * Filters the list of prefixes from GCP JSON based on region and IP version.
      *
-     * @param json The parsed JSON map received from GCP.
+     * @param items The parsed JSON map received from GCP.
      * @param region The region for which IP prefixes need to be filtered.
      * @param ipVersion The desired IP version.
      * @return A string containing matching IP prefixes, one per line.
      */
-    private fun processPrefixes(json: Map<String, Any>, region: Region, ipVersion: String): String {
+    private fun processPrefixes(items: List<Map<String, String>>, region: Region, ipVersion: String): String {
         val prefixes = mutableListOf<String>()
-        val items = (json["prefixes"] as? List<*>)?.filterIsInstance<Map<String, String>>()
-            ?: return "Invalid JSON format: missing or malformed 'prefixes'"
 
         for (entry in items) {
             val serviceScope = entry["scope"]?.lowercase() ?: continue

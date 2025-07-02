@@ -1,5 +1,6 @@
 package com.codingtest.iprange.service
 
+import com.codingtest.iprange.data.GcpResponse
 import com.codingtest.iprange.util.Region
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -15,19 +16,17 @@ import java.net.URI
 
 class IpRangeServiceTest {
 
-    private fun mockService(json: Map<String, Any>): IpRangeService {
+    private fun mockService(prefixes: List<Map<String, String>>): IpRangeService {
         val (webClient, responseSpec) = generalMock()
-        whenever(responseSpec.bodyToMono(Map::class.java)).thenReturn(Mono.just(json))
-
+        whenever(responseSpec.bodyToMono(GcpResponse::class.java)).thenReturn(Mono.just(GcpResponse(prefixes)))
         return IpRangeService(webClient)
     }
 
     private fun mockServiceForException(message: String): IpRangeService {
         val (webClient, responseSpec) = generalMock()
-        whenever(responseSpec.bodyToMono(Map::class.java)).thenReturn(
+        whenever(responseSpec.bodyToMono(GcpResponse::class.java)).thenReturn(
             Mono.error(RuntimeException(message))
         )
-
         return IpRangeService(webClient)
     }
 
@@ -48,10 +47,8 @@ class IpRangeServiceTest {
      * */
     @Test
     fun getIpRanges_shouldReturnIpv4ForUSRegion() {
-        val mockJson = mapOf(
-            "prefixes" to listOf(
-                mapOf("scope" to "us-central1", "ipv4Prefix" to "1.1.1.0/24")
-            )
+        val mockJson = listOf(
+            mapOf("scope" to "us-central1", "ipv4Prefix" to "1.1.1.0/24")
         )
 
         val service = mockService(mockJson)
@@ -65,10 +62,8 @@ class IpRangeServiceTest {
      */
     @Test
     fun getIpRanges_shouldReturnIpv6ForEURegion() {
-        val mockJson = mapOf(
-            "prefixes" to listOf(
-                mapOf("scope" to "europe-west1", "ipv6Prefix" to "2001:db8::/32")
-            )
+        val mockJson = listOf(
+            mapOf("scope" to "europe-west1", "ipv6Prefix" to "2001:db8::/32")
         )
 
         val service = mockService(mockJson)
@@ -82,11 +77,9 @@ class IpRangeServiceTest {
      */
     @Test
     fun getIpRanges_shouldReturnBothIpv4AndIpv6ForIpVersionAll() {
-        val mockJson = mapOf(
-            "prefixes" to listOf(
-                mapOf("scope" to "asia-south1", "ipv4Prefix" to "3.3.3.0/24"),
-                mapOf("scope" to "asia-south1", "ipv6Prefix" to "2404:6800::/32")
-            )
+        val mockJson = listOf(
+            mapOf("scope" to "asia-south1", "ipv4Prefix" to "3.3.3.0/24"),
+            mapOf("scope" to "asia-south1", "ipv6Prefix" to "2404:6800::/32")
         )
 
         val service = mockService(mockJson)
@@ -100,11 +93,9 @@ class IpRangeServiceTest {
      */
     @Test
     fun getIpRanges_shouldReturnAllPrefixesForRegionALL() {
-        val mockJson = mapOf(
-            "prefixes" to listOf(
-                mapOf("scope" to "us-west1", "ipv4Prefix" to "4.4.4.0/24"),
-                mapOf("scope" to "europe-west1", "ipv6Prefix" to "2607:f8b0::/32")
-            )
+        val mockJson = listOf(
+            mapOf("scope" to "us-west1", "ipv4Prefix" to "4.4.4.0/24"),
+            mapOf("scope" to "europe-west1", "ipv6Prefix" to "2607:f8b0::/32")
         )
 
         val service = mockService(mockJson)
@@ -118,10 +109,8 @@ class IpRangeServiceTest {
      */
     @Test
     fun getIpRanges_shouldReturnEmptyWhenRegionDoesNotMatchScope() {
-        val mockJson = mapOf(
-            "prefixes" to listOf(
-                mapOf("scope" to "europe-west1", "ipv4Prefix" to "2.2.2.0/24")
-            )
+        val mockJson = listOf(
+            mapOf("scope" to "europe-west1", "ipv4Prefix" to "2.2.2.0/24")
         )
 
         val service = mockService(mockJson)
@@ -135,10 +124,8 @@ class IpRangeServiceTest {
      */
     @Test
     fun getIpRanges_shouldReturnEmptyWhenIpVersionDoesNotMatchPrefix() {
-        val mockJson = mapOf(
-            "prefixes" to listOf(
-                mapOf("scope" to "us-central1", "ipv4Prefix" to "1.2.3.0/24")
-            )
+        val mockJson = listOf(
+            mapOf("scope" to "us-central1", "ipv4Prefix" to "1.2.3.0/24")
         )
 
         val service = mockService(mockJson)
@@ -157,22 +144,22 @@ class IpRangeServiceTest {
         val result = service.getIpRanges(Region.ALL, "all").block()
 
         assertEquals("Could not fetch IP ranges: Simulated timeout", result)
-
     }
 
     /**
-     * Test Spec: Should return error message when JSON is missing or malformed "prefixes" key
+     * Test Spec: Should return IPs correctly for Region.GL
      */
     @Test
-    fun getIpRanges_shouldReturnErrorWhenPrefixesKeyIsMissing() {
-        val mockJson = mapOf(
-            "someOtherKey" to "value"
+    fun getIpRanges_shouldReturnGlobalScopeIpsForRegionGL() {
+        val mockJson = listOf(
+            mapOf("scope" to "global", "ipv4Prefix" to "8.8.8.0/24"),
+            mapOf("scope" to "global", "ipv6Prefix" to "2001:4860:4860::/48")
         )
 
         val service = mockService(mockJson)
-        val result = service.getIpRanges(Region.ALL, "all").block()
+        val result = service.getIpRanges(Region.GL, "all").block()
 
-        assertEquals("Invalid JSON format: missing or malformed 'prefixes'", result)
+        assertEquals("8.8.8.0/24\n2001:4860:4860::/48", result?.trim())
     }
 
     /**
@@ -181,7 +168,7 @@ class IpRangeServiceTest {
     @Test
     fun getIpRanges_shouldReturnConnectionErrorMessage() {
         val (webClient, responseSpec) = generalMock()
-        whenever(responseSpec.bodyToMono(Map::class.java)).thenReturn(
+        whenever(responseSpec.bodyToMono(GcpResponse::class.java)).thenReturn(
             Mono.error(
                 WebClientRequestException(
                     IOException("Connection refused"),
