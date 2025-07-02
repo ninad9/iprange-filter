@@ -21,6 +21,9 @@ class IpRangeService(
             .map { json ->
                 processPrefixes(json as Map<String, Any>, region, ipVersion)
             }
+            .onErrorResume {ex ->
+            Mono.just("Could not fetch IP ranges: ${ex.message ?: "Unknown error"}")
+        }
     }
 
     private fun processPrefixes(json: Map<String, Any>, region: Region, ipVersion: String): String {

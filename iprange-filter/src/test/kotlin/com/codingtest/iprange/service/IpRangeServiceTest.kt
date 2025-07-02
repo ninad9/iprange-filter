@@ -10,7 +10,23 @@ import reactor.core.publisher.Mono
 
 class IpRangeServiceTest {
 
-    private fun mockServiceWith(json: Map<String, Any>): IpRangeService {
+    private fun mockService(json: Map<String, Any>): IpRangeService {
+        val (webClient, responseSpec) = generalMock()
+        whenever(responseSpec.bodyToMono(Map::class.java)).thenReturn(Mono.just(json))
+
+        return IpRangeService(webClient)
+    }
+
+    private fun mockServiceForException(message: String): IpRangeService {
+        val (webClient, responseSpec) = generalMock()
+        whenever(responseSpec.bodyToMono(Map::class.java)).thenReturn(
+            Mono.error(RuntimeException(message))
+        )
+
+        return IpRangeService(webClient)
+    }
+
+    private fun generalMock(): Pair<WebClient, WebClient.ResponseSpec> {
         val webClient = mock<WebClient>()
         val uriSpec = mock<WebClient.RequestHeadersUriSpec<*>>()
         val headersSpec = mock<WebClient.RequestHeadersSpec<*>>()
@@ -19,9 +35,7 @@ class IpRangeServiceTest {
         whenever(webClient.get()).thenReturn(uriSpec)
         whenever(uriSpec.uri("/ipranges/cloud.json")).thenReturn(headersSpec)
         whenever(headersSpec.retrieve()).thenReturn(responseSpec)
-        whenever(responseSpec.bodyToMono(Map::class.java)).thenReturn(Mono.just(json))
-
-        return IpRangeService(webClient)
+        return Pair(webClient, responseSpec)
     }
 
     /**
@@ -35,7 +49,7 @@ class IpRangeServiceTest {
             )
         )
 
-        val service = mockServiceWith(mockJson)
+        val service = mockService(mockJson)
         val result = service.getIpRanges(Region.US, "ipv4").block()
 
         assertEquals("1.1.1.0/24", result?.trim())
@@ -52,7 +66,7 @@ class IpRangeServiceTest {
             )
         )
 
-        val service = mockServiceWith(mockJson)
+        val service = mockService(mockJson)
         val result = service.getIpRanges(Region.EU, "ipv6").block()
 
         assertEquals("2001:db8::/32", result?.trim())
@@ -70,7 +84,7 @@ class IpRangeServiceTest {
             )
         )
 
-        val service = mockServiceWith(mockJson)
+        val service = mockService(mockJson)
         val result = service.getIpRanges(Region.AS, "all").block()
 
         assertEquals("3.3.3.0/24\n2404:6800::/32", result?.trim())
@@ -88,7 +102,7 @@ class IpRangeServiceTest {
             )
         )
 
-        val service = mockServiceWith(mockJson)
+        val service = mockService(mockJson)
         val result = service.getIpRanges(Region.ALL, "all").block()
 
         assertEquals("4.4.4.0/24\n2607:f8b0::/32", result?.trim())
@@ -105,7 +119,7 @@ class IpRangeServiceTest {
             )
         )
 
-        val service = mockServiceWith(mockJson)
+        val service = mockService(mockJson)
         val result = service.getIpRanges(Region.US, "ipv4").block()
 
         assertEquals("", result)
@@ -122,10 +136,24 @@ class IpRangeServiceTest {
             )
         )
 
-        val service = mockServiceWith(mockJson)
+        val service = mockService(mockJson)
         val result = service.getIpRanges(Region.US, "ipv6").block()
 
         assertEquals("", result)
     }
+
+    /**
+     * Test Spec: Returns fallback message when WebClient fails (e.g. timeout)
+     */
+    @Test
+    fun getIpRanges_shouldReturnFallbackMessageWhenWebClientFails() {
+        val service = mockServiceForException("Simulated timeout")
+
+        val result = service.getIpRanges(Region.ALL, "all").block()
+
+        assertEquals("Could not fetch IP ranges: Simulated timeout", result)
+
+    }
+
 
 }
