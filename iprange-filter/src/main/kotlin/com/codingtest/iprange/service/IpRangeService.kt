@@ -6,7 +6,6 @@ import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.WebClientRequestException
 import reactor.core.publisher.Mono
-import java.util.concurrent.TimeoutException
 
 /**
  * Service responsible for retrieving and filtering IP ranges

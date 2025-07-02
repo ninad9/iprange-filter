@@ -2,7 +2,6 @@ package com.codingtest.iprange.controller
 
 import com.codingtest.iprange.service.IpRangeServiceInterface
 import com.codingtest.iprange.util.Region
-import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever

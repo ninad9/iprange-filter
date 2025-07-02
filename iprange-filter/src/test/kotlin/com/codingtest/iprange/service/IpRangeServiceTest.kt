@@ -12,7 +12,6 @@ import org.springframework.web.reactive.function.client.WebClientRequestExceptio
 import reactor.core.publisher.Mono
 import java.io.IOException
 import java.net.URI
-import java.util.concurrent.TimeoutException
 
 class IpRangeServiceTest {
 
