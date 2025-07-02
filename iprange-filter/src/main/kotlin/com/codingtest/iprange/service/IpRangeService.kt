@@ -19,6 +19,9 @@ class IpRangeService(
     @Qualifier("gcpWebClient")
     private val webClient: WebClient
 ) : IpRangeServiceInterface {
+    private var cachedResponse: GcpResponse? = null
+    private var lastFetchedTime: Long = 0
+    private val refreshIntervalMillis: Long = 3600000
 
     /**
      * Retrieves IP range data from GCP and filters it based on region and IP version.
@@ -28,14 +31,26 @@ class IpRangeService(
      * @return A Mono emitting filtered IP prefixes as a newline-separated string.
      */
     override fun getIpRanges(region: Region, ipVersion: String): Mono<String> {
-        return webClient
-            .get()
-            .uri("/ipranges/cloud.json")
-            .retrieve()
-            .bodyToMono(GcpResponse::class.java)
-            .mapNotNull { response ->
-                processPrefixes(response.prefixes, region, ipVersion)
-            }
+
+        val now = System.currentTimeMillis()
+        val useCache = cachedResponse != null && (now - lastFetchedTime) < refreshIntervalMillis
+
+        val responseMono = if (useCache) {
+            Mono.just(cachedResponse!!)
+        } else {
+            webClient
+                .get()
+                .uri("/ipranges/cloud.json")
+                .retrieve()
+                .bodyToMono(GcpResponse::class.java)
+                .doOnNext { response ->
+                    cachedResponse = response
+                    lastFetchedTime = now
+                }
+        }
+
+        return responseMono
+            .mapNotNull { response -> processPrefixes(response.prefixes, region, ipVersion) }
             .switchIfEmpty(Mono.just("Malformed or empty response from GCP"))
             .onErrorResume { ex ->
                 when (ex) {

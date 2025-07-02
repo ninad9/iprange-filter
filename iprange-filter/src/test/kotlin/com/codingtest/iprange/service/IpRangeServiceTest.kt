@@ -183,4 +183,22 @@ class IpRangeServiceTest {
 
         assertEquals("Connection error: Connection refused", result)
     }
+
+    /**
+     * Test Spec: Should reuse cached response within refresh interval
+     */
+    @Test
+    fun getIpRanges_shouldUseCacheWithinRefreshInterval() {
+        val mockJson = listOf(
+            mapOf("scope" to "us-central1", "ipv4Prefix" to "5.5.5.0/24")
+        )
+        val (webClient, responseSpec) = generalMock()
+        whenever(responseSpec.bodyToMono(GcpResponse::class.java)).thenReturn(Mono.just(GcpResponse(mockJson)))
+        val service = IpRangeService(webClient)
+        val firstCall = service.getIpRanges(Region.US, "ipv4").block()
+        assertEquals("5.5.5.0/24", firstCall?.trim())
+
+        val secondCall = service.getIpRanges(Region.US, "ipv4").block()
+        assertEquals("5.5.5.0/24", secondCall?.trim())
+    }
 }
