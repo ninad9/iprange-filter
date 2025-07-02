@@ -34,7 +34,7 @@ class IpRangeController(private val ipRangeService: IpRangeServiceInterface) {
         @RequestParam(required = false, defaultValue = "all") ipType: String
     ): Mono<String> {
         val resolvedRegion = Region.fromString(region ?: "all")
-            ?: return Mono.just("Invalid region: $region")
+            ?: return Mono.error(ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid region: $region"))
 
         val ipVersionType = ipType.lowercase()
         if (ipType != "all" && ipVersionType !in setOf("ipv4", "ipv6")) {

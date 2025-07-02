@@ -104,9 +104,10 @@ class IpRangeControllerTest {
         webTestClient.get()
             .uri("/ip-ranges?region=unknown&ipType=ipv6")
             .exchange()
-            .expectStatus().isOk
-            .expectBody(String::class.java)
-            .isEqualTo("Invalid region: unknown")
+            .expectStatus().isBadRequest
+            .expectBody()
+            .jsonPath("$.status").isEqualTo(400)
+            .jsonPath("$.error").isEqualTo("Bad Request")
     }
 
     /**
