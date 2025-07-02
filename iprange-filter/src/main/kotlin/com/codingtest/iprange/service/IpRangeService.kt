@@ -4,7 +4,9 @@ import com.codingtest.iprange.util.Region
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.client.WebClient
+import org.springframework.web.reactive.function.client.WebClientRequestException
 import reactor.core.publisher.Mono
+import java.util.concurrent.TimeoutException
 
 /**
  * Service responsible for retrieving and filtering IP ranges
@@ -12,6 +14,7 @@ import reactor.core.publisher.Mono
  *
  * This service uses a WebClient bean named "gcpWebClient".
  */
+@Suppress("UNCHECKED_CAST")
 @Service
 class IpRangeService(
     @Qualifier("gcpWebClient")
@@ -32,11 +35,15 @@ class IpRangeService(
             .uri("/ipranges/cloud.json")
             .retrieve()
             .bodyToMono(Map::class.java)
-            .map { json ->
-                processPrefixes(json as Map<String, Any>, region, ipVersion)
+            .mapNotNull { json ->
+                (json as? Map<String, Any>)?.let { processPrefixes(it, region, ipVersion) }
             }
+            .switchIfEmpty(Mono.just("Malformed or empty response from GCP"))
             .onErrorResume { ex ->
-                Mono.just("Could not fetch IP ranges: ${ex.message ?: "Unknown error"}")
+                when (ex) {
+                    is WebClientRequestException -> Mono.just("Connection error: ${ex.message}")
+                    else -> Mono.just("Could not fetch IP ranges: ${ex.message}")
+                }
             }
     }
 
@@ -50,7 +57,8 @@ class IpRangeService(
      */
     private fun processPrefixes(json: Map<String, Any>, region: Region, ipVersion: String): String {
         val prefixes = mutableListOf<String>()
-        val items = json["prefixes"] as List<Map<String, String>>
+        val items = (json["prefixes"] as? List<*>)?.filterIsInstance<Map<String, String>>()
+            ?: return "Invalid JSON format: missing or malformed 'prefixes'"
 
         for (entry in items) {
             val serviceScope = entry["scope"]?.lowercase() ?: continue

@@ -2,10 +2,12 @@ package com.codingtest.iprange.controller
 
 import com.codingtest.iprange.service.IpRangeServiceInterface
 import com.codingtest.iprange.util.Region
+import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.server.ResponseStatusException
 import reactor.core.publisher.Mono
 
 /**
@@ -36,7 +38,7 @@ class IpRangeController(private val ipRangeService: IpRangeServiceInterface) {
 
         val ipVersionType = ipType.lowercase()
         if (ipType != "all" && ipVersionType !in setOf("ipv4", "ipv6")) {
-            return Mono.just("Invalid IP type: $ipType")
+            return Mono.error(ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid IP type: $ipType"))
         }
 
         return ipRangeService.getIpRanges(resolvedRegion, ipVersionType)

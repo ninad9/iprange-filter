@@ -2,6 +2,7 @@ package com.codingtest.iprange.controller
 
 import com.codingtest.iprange.service.IpRangeServiceInterface
 import com.codingtest.iprange.util.Region
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
@@ -117,8 +118,9 @@ class IpRangeControllerTest {
         webTestClient.get()
             .uri("/ip-ranges?region=us&ipType=abcd")
             .exchange()
-            .expectStatus().isOk
-            .expectBody(String::class.java)
-            .isEqualTo("Invalid IP type: abcd")
+            .expectStatus().isBadRequest
+            .expectBody()
+            .jsonPath("$.status").isEqualTo(400)
+            .jsonPath("$.error").isEqualTo("Bad Request")
     }
 }

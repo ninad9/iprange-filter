@@ -5,8 +5,14 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
+import org.springframework.http.HttpHeaders
+import org.springframework.http.HttpMethod
 import org.springframework.web.reactive.function.client.WebClient
+import org.springframework.web.reactive.function.client.WebClientRequestException
 import reactor.core.publisher.Mono
+import java.io.IOException
+import java.net.URI
+import java.util.concurrent.TimeoutException
 
 class IpRangeServiceTest {
 
@@ -155,5 +161,40 @@ class IpRangeServiceTest {
 
     }
 
+    /**
+     * Test Spec: Should return error message when JSON is missing or malformed "prefixes" key
+     */
+    @Test
+    fun getIpRanges_shouldReturnErrorWhenPrefixesKeyIsMissing() {
+        val mockJson = mapOf(
+            "someOtherKey" to "value"
+        )
 
+        val service = mockService(mockJson)
+        val result = service.getIpRanges(Region.ALL, "all").block()
+
+        assertEquals("Invalid JSON format: missing or malformed 'prefixes'", result)
+    }
+
+    /**
+     * Test Spec: Should return "Connection error" message when WebClientRequestException occurs
+     */
+    @Test
+    fun getIpRanges_shouldReturnConnectionErrorMessage() {
+        val (webClient, responseSpec) = generalMock()
+        whenever(responseSpec.bodyToMono(Map::class.java)).thenReturn(
+            Mono.error(
+                WebClientRequestException(
+                    IOException("Connection refused"),
+                    HttpMethod.GET,
+                    URI("http://test.com"),
+                    HttpHeaders.EMPTY
+                )
+            )
+        )
+        val service = IpRangeService(webClient)
+        val result = service.getIpRanges(Region.ALL, "all").block()
+
+        assertEquals("Connection error: Connection refused", result)
+    }
 }
