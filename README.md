@@ -29,7 +29,6 @@ cd iprange-filter
 ```bash
 mvn clean package
 java -jar target/iprange-filter.jar
-java -jar target/iprange-filter.jar
 ```
 ### 3. Access the API
 GET http://localhost:8080/ip-ranges?region=EU&ipType=ipv4
