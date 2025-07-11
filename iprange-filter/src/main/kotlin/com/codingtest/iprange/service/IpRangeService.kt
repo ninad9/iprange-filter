@@ -19,8 +19,12 @@ class IpRangeService(
     @Qualifier("gcpWebClient")
     private val webClient: WebClient
 ) : IpRangeServiceInterface {
+    @Volatile
     private var cachedResponse: GcpResponse? = null
+    @Volatile
     private var lastFetchedTime: Long = 0
+    private val cacheLock = Any()
+
     private val refreshIntervalMillis: Long = 3600000
 
     /**
@@ -33,20 +37,31 @@ class IpRangeService(
     override fun getIpRanges(region: Region, ipVersion: String): Mono<String> {
 
         val now = System.currentTimeMillis()
-        val useCache = cachedResponse != null && (now - lastFetchedTime) < refreshIntervalMillis
+        val localCopy = cachedResponse
+        val useCache = localCopy != null && isCacheValidByTime(now)
 
-        val responseMono = if (useCache) {
-            Mono.just(cachedResponse!!)
+        val responseMono: Mono<GcpResponse> = if (useCache) {
+            Mono.just(localCopy!!)
         } else {
-            webClient
-                .get()
-                .uri("/ipranges/cloud.json")
-                .retrieve()
-                .bodyToMono(GcpResponse::class.java)
-                .doOnNext { response ->
-                    cachedResponse = response
-                    lastFetchedTime = now
+            synchronized(cacheLock) {
+                val stillFresh = cachedResponse != null && isCacheValidByTime(System.currentTimeMillis())
+
+                if (stillFresh) {
+                    Mono.just(cachedResponse!!)
+                } else {
+                    webClient.get()
+                        .uri("/ipranges/cloud.json")
+                        .retrieve()
+                        .bodyToMono(GcpResponse::class.java)
+                        // update the shared cache *after* the response arrives
+                        .doOnNext { resp ->
+                            synchronized(cacheLock) {   // tiny critical section
+                                cachedResponse = resp
+                                lastFetchedTime = System.currentTimeMillis()
+                            }
+                        }
                 }
+            }
         }
 
         return responseMono
@@ -59,6 +74,8 @@ class IpRangeService(
                 }
             }
     }
+
+    private fun isCacheValidByTime(now: Long) = (now - lastFetchedTime) < refreshIntervalMillis
 
     /**
      * Filters the list of prefixes from GCP JSON based on region and IP version.
@@ -76,7 +93,8 @@ class IpRangeService(
             val ipPrefix = entry["ipv4Prefix"] ?: entry["ipv6Prefix"] ?: continue
 
             if (isVersionAllAndRegionValid(region, serviceScope) &&
-                isValidIpVersion(ipVersion, entry)) {
+                isValidIpVersion(ipVersion, entry)
+            ) {
                 prefixes.add(ipPrefix)
             }
         }
