@@ -5,7 +5,7 @@ A  Spring Boot-based REST API to fetch and filter GCP IP ranges by region and IP
 ## Features
 
 - Fetches GCP IP prefixes from https://www.gstatic.com/ipranges/cloud.json
-- Filters results by geographic region (Europe, US, Asia, etc.)
+- Filters results by geographic region ("EU": Europe, "AS": Asia, "US": America, etc.)
 - Supports "IPv4", "IPv6", or both
 - Built using Spring Boot & Kotlin
 - Dockerized for easy deployment
