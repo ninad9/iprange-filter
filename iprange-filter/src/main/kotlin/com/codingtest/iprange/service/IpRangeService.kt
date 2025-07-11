@@ -75,15 +75,36 @@ class IpRangeService(
             val serviceScope = entry["scope"]?.lowercase() ?: continue
             val ipPrefix = entry["ipv4Prefix"] ?: entry["ipv6Prefix"] ?: continue
 
-            if ((region == Region.ALL || region.scopes.any { serviceScope.contains(it) }) &&
-                (ipVersion == "all" ||
-                        (ipVersion == "ipv4" && entry.containsKey("ipv4Prefix")) ||
-                        (ipVersion == "ipv6" && entry.containsKey("ipv6Prefix")))
-            ) {
+            if (isVersionAllAndRegionValid(region, serviceScope) &&
+                isValidIpVersion(ipVersion, entry)) {
                 prefixes.add(ipPrefix)
             }
         }
         return prefixes.joinToString(separator = "\n")
     }
+
+    private fun isVersionAllAndRegionValid(region: Region, serviceScope: String) =
+        (isRegionAll(region) || isValidScope(region, serviceScope))
+
+    private fun isValidIpVersion(ipVersion: String, entry: Map<String, String>) =
+        (isIpVersionAll(ipVersion) || isEntryForIpv4(ipVersion, entry) ||
+                isEntryForIpv6(ipVersion, entry))
+
+    private fun isValidScope(region: Region, serviceScope: String) =
+        region.scopes.any { serviceScope.contains(it) }
+
+    private fun isEntryForIpv6(ipVersion: String, entry: Map<String, String>) =
+        (isIpv6(ipVersion) && entry.containsKey("ipv6Prefix"))
+
+    private fun isEntryForIpv4(ipVersion: String, entry: Map<String, String>) =
+        (isIpv4(ipVersion) && entry.containsKey("ipv4Prefix"))
+
+    private fun isIpv6(ipVersion: String) = ipVersion == "ipv6"
+
+    private fun isIpv4(ipVersion: String) = ipVersion == "ipv4"
+
+    private fun isIpVersionAll(ipVersion: String) = ipVersion == "all"
+
+    private fun isRegionAll(region: Region) = region == Region.ALL
 
 }

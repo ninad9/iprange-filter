@@ -21,7 +21,7 @@ class IpRangeController(private val ipRangeService: IpRangeServiceInterface) {
     /**
      * Retrieves GCP IP ranges based on the given region and IP version type.
      *
-     * @param region Query parameter indicating region (e.g. "europe", "asia", etc.).
+     * @param region Query parameter indicating region (e.g. "EU","AS", "US", etc.).
      *               If omitted, defaults to "all".
      * @param ipType Query parameter indicating IP version: "ipv4", "ipv6", or "all".
      *               Defaults to "all".
